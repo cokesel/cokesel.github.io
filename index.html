@@ -1,193 +1,162 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>旋转块v2-byGuayp</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6758774041872304"
-     crossorigin="anonymous"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f4f4f4;;
-        }
-
-        #controls {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .upbutton{
-            display: block;
-            padding: 10px 20px;
-            margin: 5px auto;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #008CBA;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        .shape-option {
-            display: block;
-            padding: 10px 20px;
-            margin: 5px auto;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #ff9c9c;
-            color: white;
-            border: none;
-            border-radius: 100px;
-            transition: background-color 0.3s ease;
-        }
-
-        .upbutton:hover{
-            background-color: #00829d;
-        }
-
-        .shape-option:hover {
-            background-color: rgb(186, 87, 87);
-        }
-
-        .shape-container {
-            margin: 10px 0;
-            border: 1px solid #803838;
-            border-radius: 5px;
-            padding: 10px;
-        }
-
-        #cube-container {
-            width: 98%;
-            height: 98%;
-            display: none;
-            align-items: center;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Symmetry Generator</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    background: #f7f7f7;
+  }
+  .container {
+    margin-top: 50px;
+  }
+  #canvas {
+  border: 1px solid #ddd;
+  margin-top: 20px;
+  /* Removed the fixed width and height */
+}
+  .button {
+    display: none; /* Changed from visibility to display for better control */
+    margin: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background: #005eff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+  }
+  .visible {
+    display: inline-block; /* Make the button visible */
+  }
+  .upload-btn-wrapper {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+  }
+  .upload-btn-wrapper input[type=file] {
+    font-size: 100px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+  }
+  #upload-label {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    margin: 20px;
+  }
+  #upload-label:hover {
+    background: #45a049;
+  }
+  canvas {
+    display: block; /* Removes the bottom margin/padding */
+    margin: 0 auto; /* Centers the canvas */
+  }
+</style>
 </head>
 <body>
-    <audio id="bgm" src="https://guarp.github.io/td/bgm.mp3" loop></audio>
-    
-    <div id="controls">
-        <h1 style="color: rgb(0, 0, 0);">旋转块<br>V2</h1>
-        <div class="shape-container">
-            <label class="shape-option">
-                <input type="radio" id="cube" name="shape" value="cube" checked> 立方体
-            </label>
-            <label class="shape-option">
-                <input type="radio" id="sphere" name="shape" value="sphere"> 球体
-            </label>
-        </div>
-        <label for="image-upload" class="upbutton">选择图片</label>
-        <input type="file" id="image-upload" accept="image/*" style="display: none;">
-    
-        背景颜色<input type="color" id="background-color-picker" value="#000000">
-    
-    </div>
-    
-    <div id="cube-container"></div>
-    <script src="https://guarp.github.io/td/three.min.js"></script>
-    <script>
-        var isImageUploaded = false;
-        var container = document.getElementById('cube-container');
-        var uploader = document.getElementById('image-upload');
-        var controls = document.getElementById('controls');
-        var colorPicker = document.getElementById('background-color-picker');
-        var scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
-        camera.position.z = 2;
+<div class="container">
+  <div class="upload-btn-wrapper">
+    <button id="upload-label">上传图片</button>
+    <input type="file" id="upload" accept="image/*" />
+  </div>
+  <button id="left" class="button">保留左侧</button>
+  <button id="right" class="button">保留右侧</button>
+  <button id="download" class="button">下载</button>
+  <canvas id="canvas"></canvas> <!-- Fixed size in HTML as well -->
+  
+</div>
 
-        var renderer = new THREE.WebGLRenderer({antialias: true});
-        renderer.setSize(container.offsetWidth, container.offsetHeight);
-        container.appendChild(renderer.domElement);
-        
+<script>
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d');
+  var image = new Image();
 
-        var textureLoader = new THREE.TextureLoader();
-        var cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-        var cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        scene.add(cube);
+  function toggleButtons(display) {
+    var buttons = document.querySelectorAll('.button');
+    buttons.forEach(function(button) {
+      if (display) {
+        button.classList.add('visible');
+      } else {
+        button.classList.remove('visible');
+      }
+    });
+  }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            // cube.rotation.x += 0.01;
-            
-            cube.rotation.y += 0.01;
-            renderer.render(scene, camera);
-        }
+  document.getElementById('upload').addEventListener('change', function(e) {
+  if (e.target.files && e.target.files[0]) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      image.onload = function() {
+        // Set canvas size to image size
+        canvas.width = image.width;
+        canvas.height = image.height;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        toggleButtons(true); // Show the symmetry buttons
+      };
+      image.src = e.target.result;
+    };
+    reader.readAsDataURL(e.target.files[0]);
+  }
+});
 
-        function onWindowResize() {
-            camera.aspect = container.offsetWidth / container.offsetHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.offsetWidth, container.offsetHeight);
-        }
 
-        window.addEventListener('resize', onWindowResize, false);
+  function applySymmetry(side) {
+  // Calculate the scale to fit the image into the canvas
+  var scale = Math.min(canvas.width / image.width, canvas.height / image.height);
+  var scaledWidth = image.width * scale;
+  var scaledHeight = image.height * scale;
+  var offsetX = (canvas.width - scaledWidth) / 2;
+  var offsetY = (canvas.height - scaledHeight) / 2;
 
-        var shape = "cube"; // 默认形状
+  // Clear the entire canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        document.querySelectorAll('input[name="shape"]').forEach(function(radio) {
-            radio.addEventListener('change', function() {
-                shape = this.value;
+  // Draw the image centered in the canvas
+  ctx.drawImage(image, offsetX, offsetY, scaledWidth, scaledHeight);
 
-                // 移除当前立方体或球体
-                scene.remove(cube);
+  if (side === 'left') {
+    // Clear the right half where the mirrored image will be drawn
+    ctx.clearRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
+    // Draw the left half on the right side
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1.01, 1);
+    ctx.drawImage(canvas, 0, 0, canvas.width / 2, canvas.height, 0, 0, canvas.width / 2, canvas.height);
+    ctx.restore();
+  } else if (side === 'right') {
+    // Clear the left half where the mirrored image will be drawn
+    ctx.clearRect(0, 0, canvas.width / 2, canvas.height);
+    // Draw the right half on the left side
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(canvas, canvas.width / 2, 0, canvas.width / 2, canvas.height, -canvas.width / 2, 0, canvas.width / 2, canvas.height);
+    ctx.restore();
+  }
+}
 
-                // 创建新的立方体或球体
-                if (shape === "cube") {
-                    cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-                } else if (shape === "sphere") {
-                    cubeGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-                }
-                cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-                scene.add(cube);
 
-                // 如果已经上传了图片，则应用贴图
-                if (isImageUploaded) {
-                    textureLoader.load(isImageUploaded, function (texture) {
-                        cube.material.map = texture;
-                        cube.material.needsUpdate = true;
-                    });
-                }
-            });
-        });
 
-        uploader.addEventListener('change', function (e) {
-            var file = e.target.files[0];
-            var url = URL.createObjectURL(file);
-            isImageUploaded = url;
+  document.getElementById('left').addEventListener('click', function() { applySymmetry('left'); });
+  document.getElementById('right').addEventListener('click', function() { applySymmetry('right'); });
 
-            var img = new Image();
-            img.onload = function () {
-                var aspectRatio = img.naturalWidth / img.naturalHeight;
-                cube.scale.x = aspectRatio;
-                cube.scale.y = 1;
-                cube.scale.z = 1;
-
-                textureLoader.load(url, function (texture) {
-                    cube.material.map = texture;
-                    cube.material.needsUpdate = true;
-                });
-            };
-            img.src = url;
-            var chosenColor = colorPicker.value;
-            renderer.setClearColor(chosenColor); // 更 新渲染器背景色
-            document.body.style.backgroundColor = chosenColor; // 更新网页背景色
-            controls.style.display = 'none';
-            container.style.display = 'block';
-            onWindowResize();
-            bgm.play();
-        });
-
-        animate();
-
-        var bgm = document.getElementById('bgm');
-    </script>
+  document.getElementById('download').addEventListener('click', function() {
+    var link = document.createElement('a');
+    link.download = 'symmetry.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+</script>
 </body>
 </html>
